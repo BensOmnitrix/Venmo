@@ -1,5 +1,5 @@
 {
-  "name": "docs",
+  "name": "merchant",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -13,11 +13,13 @@
   "dependencies": {
     "@repo/db": "*",
     "@repo/ui": "*",
+    "@repo/store": "*",
     "@tailwindcss/postcss": "^4.1.18",
     "next": "^16.0.7",
     "postcss": "^8.4.31",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "recoil": "^0.7.7",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
