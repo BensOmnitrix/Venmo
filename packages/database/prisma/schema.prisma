@@ -14,7 +14,125 @@ datasource db {
 }
 
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  role      Role      @default(USER) // USER or MERCHANT or ADMIN
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  wallet    Wallet?
+  kycStatus KycStatus @default(PENDING)
+  // auth fields are handled by NextAuth (store provider tokens in a linked table if needed)
+  sessions  Session[]
+  payments  Payment[]
+}
+
+model Wallet {
+  id          String        @id @default(cuid())
+  ownerId     String        @unique
+  owner       User          @relation(fields: [ownerId], references: [id])
+  createdAt   DateTime      @default(now())
+  // derived balance - don't store, compute from LedgerEntries
+  LedgerEntry LedgerEntry[]
+}
+
+model LedgerEntry {
+  id       String @id @default(cuid())
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id])
+
+  amount   Decimal
+  currency String    @default("INR")
+  type     EntryType
+
+  relatedId String? // paymentId | payoutId | transferId
+  metadata  Json?
+
+  idempotencyKey String?
+  createdAt      DateTime @default(now())
+
+  @@unique([idempotencyKey])
+  @@index([walletId])
+  @@index([relatedId])
+}
+
+model Payment {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  gatewayPaymentId String?
+  amount           Decimal
+  currency         String        @default("INR")
+  status           PaymentStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Payout {
+  id              String       @id @default(cuid())
+  walletId        String
+  amount          Decimal
+  currency        String       @default("INR")
+  fee             Decimal      @default(0)
+  status          PayoutStatus @default(PENDING)
+  gatewayPayoutId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  provider   String
+  eventId    String   @unique
+  payload    Json
+  processed  Boolean  @default(false)
+  receivedAt DateTime @default(now())
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  MERCHANT
+  ADMIN
+}
+
+enum EntryType {
+  TOPUP
+  TOPUP_FEE
+  TRANSFER_IN
+  TRANSFER_OUT
+  REFUND
+  PAYOUT
+  PAYOUT_FEE
+  SETTLEMENT
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  INITIATED
+  SUCCEEDED
+  FAILED
+}
+
+enum KycStatus {
+  PENDING
+  VERIFIED
+  REJECTED
 }
